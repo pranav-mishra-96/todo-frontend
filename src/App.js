@@ -1,65 +1,81 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
-const API_URL = 'http://localhost:5000/api/todos';
+const App = () => {
+  const [todos, setTodos] = useState([]); // State to store the list of todos
+  const [newTodo, setNewTodo] = useState(""); // State to manage input field
 
-function App() {
-  const [todos, setTodos] = useState([]);
-  const [newTodo, setNewTodo] = useState('');
+  // Fetch todos from the backend
+  const fetchTodos = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/todos");
+      setTodos(response.data); // Update the state with the fetched todos
+    } catch (error) {
+      console.error("Error fetching todos:", error);
+    }
+  };
 
+  // Add a new todo
+  const addTodo = async () => {
+    if (!newTodo.trim()) return; // Prevent adding empty items
+    try {
+      const response = await axios.post("http://localhost:5000/api/todos", {
+        title: newTodo,
+      });
+
+      // Update the state immediately with the new item
+      setTodos([...todos, { id: response.data.id, title: newTodo, completed: 0 }]);
+      setNewTodo(""); // Clear input field
+    } catch (error) {
+      console.error("Error adding todo:", error);
+    }
+  };
+
+  // Delete a todo
+  const deleteTodo = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/todos/${id}`);
+      
+      // Update the state by filtering out the deleted item
+      setTodos(todos.filter((todo) => todo.id !== id));
+    } catch (error) {
+      console.error("Error deleting todo:", error);
+    }
+  };
+
+  // Fetch todos when the component mounts
   useEffect(() => {
-    axios.get(API_URL).then((response) => setTodos(response.data));
+    fetchTodos();
   }, []);
 
-  const addTodo = () => {
-    axios.post(API_URL, { title: newTodo }).then((response) => {
-      setTodos([...todos, response.data]);
-      setNewTodo('');
-    });
-  };
-
-  const updateTodo = (id, completed) => {
-    const todo = todos.find((t) => t.id === id);
-    axios.put(`${API_URL}/${id}`, { ...todo, completed: !completed }).then(() => {
-      setTodos(
-        todos.map((t) => (t.id === id ? { ...t, completed: !completed } : t))
-      );
-    });
-  };
-
-  const deleteTodo = (id) => {
-    axios.delete(`${API_URL}/${id}`).then(() => {
-      setTodos(todos.filter((t) => t.id !== id));
-    });
-  };
-
   return (
-    <div>
+    <div style={{ padding: "20px" }}>
       <h1>To-Do List</h1>
-      <input
-        type="text"
-        value={newTodo}
-        onChange={(e) => setNewTodo(e.target.value)}
-        placeholder="Add a new task"
-      />
-      <button onClick={addTodo}>Add</button>
+
+      {/* Input Field */}
+      <div>
+        <input
+          type="text"
+          value={newTodo}
+          onChange={(e) => setNewTodo(e.target.value)}
+          placeholder="Add a new to-do..."
+        />
+        <button onClick={addTodo}>Add</button>
+      </div>
+
+      {/* Display To-Do List */}
       <ul>
         {todos.map((todo) => (
-          <li key={todo.id}>
-            <span
-              style={{
-                textDecoration: todo.completed ? 'line-through' : 'none',
-              }}
-              onClick={() => updateTodo(todo.id, todo.completed)}
-            >
-              {todo.title}
-            </span>
-            <button onClick={() => deleteTodo(todo.id)}>Delete</button>
+          <li key={todo.id} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span>{todo.title}</span>
+            <button onClick={() => deleteTodo(todo.id)} style={{ color: "red" }}>
+              Delete
+            </button>
           </li>
         ))}
       </ul>
     </div>
   );
-}
+};
 
 export default App;
